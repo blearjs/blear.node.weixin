@@ -1,5 +1,6 @@
 /**
  * weixin
+ * @doc http://mp.weixin.qq.com/wiki/17/c0f37d5704f0b64713d5d2c37b468d75.html
  * @author ydr.me
  * @create 2015-12-08 11:08
  */
@@ -11,6 +12,7 @@ var howdo = require('blear.utils.howdo');
 var object = require('blear.utils.object');
 var random = require('blear.utils.random');
 var number = require('blear.utils.number');
+var fun = require('blear.utils.function');
 var encryption = require('blear.node.encryption');
 var request = require('blear.node.request');
 var Cache = require('blear.classes.cache');
@@ -18,31 +20,11 @@ var Cache = require('blear.classes.cache');
 
 var cache = new Cache();
 var reHash = /#.*$/;
-var ACCESS_TOKEN = 'accessToken';
 var API_TICKET = 'apiTicket';
 var WEIXIN_TOKEN_URL = 'https://api.weixin.qq.com/cgi-bin/token';
 var WEIXIN_TICKET_URL = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket';
-
-
-/**
- * 解析微信返回内容
- * @param body
- * @returns {*[]}
- */
-var parseWeixinBody = function (body) {
-    var json = {};
-
-    try {
-        json = JSON.parse(body);
-        json.errcode = json.errcode || 0;
-    } catch (err) {
-        json.errcode = -1;
-        json.errmsg = '数据解析失败';
-    }
-
-    return [json.errcode !== 0 ? new TypeError(json.errmsg || '未知错误') : null, json];
-};
-
+var WEIXIN_ACCESS_TOKEN_URL = 'https://api.weixin.qq.com/sns/oauth2/access_token';
+var WEIXIN_USER_INFO = 'https://api.weixin.qq.com/sns/userinfo';
 var configs = {
     cache: true,
     appId: '',
@@ -56,46 +38,76 @@ exports.config = function (cf) {
 };
 
 
-// 获取微信 access_token
-var getAccessToken = function (callback) {
-    var cached = cache.get(ACCESS_TOKEN);
+/**
+ * 解析微信返回内容
+ * @param callback
+ */
+var parseWeixinBody = function (callback) {
+    callback = fun.noop(callback);
 
-    if (cached) {
-        return callback(null, cached);
-    }
+    return function (err, body) {
+        if (err) {
+            return callback(err);
+        }
 
+        var ret = {};
+
+        try {
+            ret = JSON.parse(body);
+            ret.errcode = ret.errcode || 0;
+        } catch (err) {
+            ret.errcode = -1;
+            ret.errmsg = '数据解析失败';
+        }
+
+        if (ret.errcode !== 0) {
+            return callback(new TypeError(ret.errmsg || '未知错误'));
+        }
+
+        if(ret.expires_in) {
+            ret.expiresIn = ret.expires_in;
+        }
+
+        if(ret.access_token) {
+            ret.accessToken = ret.access_token;
+        }
+
+        if(ret.refreshToken) {
+            ret.accessToken = ret.refresh_token;
+        }
+
+        if(ret.openid) {
+            ret.openId = ret.openid;
+        }
+
+        if(ret.openid) {
+            ret.unionId = ret.unionid;
+        }
+
+        if(ret.headimgurl) {
+            ret.avatar = ret.headimgurl;
+        }
+
+        callback(null, ret);
+    };
+};
+
+
+// 获取微信 JSSDK token
+var getJSSDKToken = function (callback) {
     request({
         url: WEIXIN_TOKEN_URL,
         query: {
             grant_type: 'client_credential',
-            appid: configs.appId || configs.appid,
+            appid: configs.appId,
             secret: configs.secret
         }
-    }, function (err, body) {
-        if (err) {
-            return callback(err);
-        }
-
-        var args = parseWeixinBody(body);
-        var json = args[1];
-
-        err = args[0];
-
-        if (err) {
-            return callback(err);
-        }
-
-        if (configs.cache) {
-            cache.set(ACCESS_TOKEN, json.access_token, json.expires_in * 900);
-        }
-
-        callback(err, json.access_token);
-    });
+    }, parseWeixinBody(callback));
 };
 
 
-// 获取微信 jsapi_ticket
-var getJSApiTicket = function (callback) {
+// 获取微信 JSSDK jsapi_ticket
+var getJSSDKApiTicket = function (callback) {
     if (configs.jsApiTicket) {
         return callback(null, configs.jsApiTicket);
     }
@@ -107,7 +119,7 @@ var getJSApiTicket = function (callback) {
     }
 
     howdo
-        .task(getAccessToken)
+        .task(getJSSDKToken)
         .task(function (next, accessToken) {
             request({
                 url: WEIXIN_TICKET_URL,
@@ -115,26 +127,17 @@ var getJSApiTicket = function (callback) {
                     access_token: accessToken,
                     type: 'jsapi'
                 }
-            }, function (err, body) {
-                if (err) {
-                    return next(err);
-                }
-
-                var args = parseWeixinBody(body);
-                var json = args[1];
-
-                err = args[0];
-
+            }, parseWeixinBody(function (err, ret) {
                 if (err) {
                     return next(err);
                 }
 
                 if (configs.cache) {
-                    cache.set(API_TICKET, json.ticket, json.expires_in * 900);
+                    cache.set(API_TICKET, ret.ticket, ret.expiresIn * 900);
                 }
 
-                next(err, json.ticket);
-            });
+                next(err, ret.ticket);
+            }));
         })
         .follow(callback);
 };
@@ -184,7 +187,7 @@ exports.JSSDKSignature = function (url, callback) {
         throw new Error('请调用`weixin.config({appId, secret:})`');
     }
 
-    getJSApiTicket(function (err, jsAPITicket) {
+    getJSSDKApiTicket(function (err, jsAPITicket) {
         if (err) {
             return callback(err);
         }
@@ -194,5 +197,38 @@ exports.JSSDKSignature = function (url, callback) {
 };
 
 
+/**
+ * 根据 code 获取 accessToken
+ * @param code
+ * @param callback
+ */
+exports.getAccessToken = function (code, callback) {
+    request({
+        url: WEIXIN_ACCESS_TOKEN_URL,
+        query: {
+            appid: configs.appId,
+            secret: configs.secret,
+            code: code,
+            grant_type: 'authorization_code'
+        }
+    }, parseWeixinBody(callback));
+};
 
+
+/**
+ * 获取用户基本信息
+ * @param openId
+ * @param accessToken
+ * @param callback
+ */
+exports.getUserInfo = function (openId, accessToken, callback) {
+    request({
+        url: WEIXIN_USER_INFO,
+        query: {
+            access_token: accessToken,
+            openid: openId,
+            lang: 'zh_CN'
+        }
+    }, parseWeixinBody(callback));
+};
 
