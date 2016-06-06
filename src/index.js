@@ -62,6 +62,7 @@ var parseWeixinBody = function (callback) {
         }
 
         if (ret.expires_in) {
+            ret.expires_in =ret.expires_in * 1000;
             ret.expiresIn = ret.expires_in;
         }
 
@@ -128,13 +129,13 @@ var getJSSDKApiTicket = function (callback) {
 
 /**
  * 签名算法
- * @param jsApiTicket {String} 用于签名的 jsapi_ticket
+ * @param info {String} 用于签名的 jsapi_ticket
  * @param url {String} 用于签名的 url ，注意必须动态获取，不能 hardcode
  * @returns {Object}
  */
-var signature = function (jsApiTicket, url) {
+var signature = function (info, url) {
     var ret = {
-        jsapi_ticket: jsApiTicket,
+        jsapi_ticket: info.ticket,
         nonceStr: random.string(),
         timestamp: number.parseInt(Date.now() / 1000),
         url: url.replace(reHash, '')
@@ -153,9 +154,10 @@ var signature = function (jsApiTicket, url) {
     var signature = encryption.sha1(str);
 
     return object.assign(ret, configs, {
-        jsApiTicket: jsApiTicket,
+        jsApiTicket: info,
         signature: signature,
-        state: random.string()
+        state: random.string(),
+        expiresIn: info.expiresIn
     });
 };
 
@@ -166,12 +168,12 @@ var signature = function (jsApiTicket, url) {
  * @param callback
  */
 exports.JSSDKSignature = function (url, callback) {
-    getJSSDKApiTicket(function (err, jsAPITicket) {
+    getJSSDKApiTicket(function (err, info) {
         if (err) {
             return callback(err);
         }
 
-        callback(null, signature(jsAPITicket, url));
+        callback(null, signature(info, url));
     });
 };
 
