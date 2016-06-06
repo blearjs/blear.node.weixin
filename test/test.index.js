@@ -10,17 +10,22 @@
 var expect = require('chai').expect;
 var weixin = require('../src/index.js');
 
+
 describe('测试文件', function () {
     it('base', function (done) {
         var url = 'http://ydr.me/';
 
         weixin.config({
-            appId: 'wx96a5681296a37413',
-            secret: 'ef20.....bf1d192'
+            debug: true,
+            appId: 'wxa8c289037620b15c',
+            secret: '397c03bae013c5ade076009c973edf2e'
         });
 
         weixin.JSSDKSignature(url, function (err, sign) {
-            console.log(err);
+            if(err) {
+                return done(err);
+            }
+
             console.log(sign);
             done();
         });

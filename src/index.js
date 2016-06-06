@@ -15,18 +15,15 @@ var number = require('blear.utils.number');
 var fun = require('blear.utils.function');
 var encryption = require('blear.node.encryption');
 var request = require('blear.node.request');
-var Cache = require('blear.classes.cache');
 
 
-var cache = new Cache();
 var reHash = /#.*$/;
-var API_TICKET = 'apiTicket';
 var WEIXIN_TOKEN_URL = 'https://api.weixin.qq.com/cgi-bin/token';
 var WEIXIN_TICKET_URL = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket';
 var WEIXIN_ACCESS_TOKEN_URL = 'https://api.weixin.qq.com/sns/oauth2/access_token';
 var WEIXIN_USER_INFO = 'https://api.weixin.qq.com/sns/userinfo';
 var configs = {
-    cache: true,
+    debug: false,
     appId: '',
     secret: '',
     // 指定 令牌
@@ -64,27 +61,27 @@ var parseWeixinBody = function (callback) {
             return callback(new TypeError(ret.errmsg || '未知错误'));
         }
 
-        if(ret.expires_in) {
+        if (ret.expires_in) {
             ret.expiresIn = ret.expires_in;
         }
 
-        if(ret.access_token) {
+        if (ret.access_token) {
             ret.accessToken = ret.access_token;
         }
 
-        if(ret.refreshToken) {
+        if (ret.refreshToken) {
             ret.accessToken = ret.refresh_token;
         }
 
-        if(ret.openid) {
+        if (ret.openid) {
             ret.openId = ret.openid;
         }
 
-        if(ret.openid) {
+        if (ret.openid) {
             ret.unionId = ret.unionid;
         }
 
-        if(ret.headimgurl) {
+        if (ret.headimgurl) {
             ret.avatar = ret.headimgurl;
         }
 
@@ -101,7 +98,8 @@ var getJSSDKToken = function (callback) {
             grant_type: 'client_credential',
             appid: configs.appId,
             secret: configs.secret
-        }
+        },
+        debug: configs.debug
     }, parseWeixinBody(callback));
 };
 
@@ -112,32 +110,17 @@ var getJSSDKApiTicket = function (callback) {
         return callback(null, configs.jsApiTicket);
     }
 
-    var cached = cache.get(API_TICKET);
-
-    if (cached) {
-        return callback(null, cached);
-    }
-
     howdo
         .task(getJSSDKToken)
-        .task(function (next, accessToken) {
+        .task(function (next, ret) {
             request({
                 url: WEIXIN_TICKET_URL,
                 query: {
-                    access_token: accessToken,
+                    access_token: ret.accessToken,
                     type: 'jsapi'
-                }
-            }, parseWeixinBody(function (err, ret) {
-                if (err) {
-                    return next(err);
-                }
-
-                if (configs.cache) {
-                    cache.set(API_TICKET, ret.ticket, ret.expiresIn * 900);
-                }
-
-                next(err, ret.ticket);
-            }));
+                },
+                debug: configs.debug
+            }, parseWeixinBody(next));
         })
         .follow(callback);
 };
@@ -183,10 +166,6 @@ var signature = function (jsApiTicket, url) {
  * @param callback
  */
 exports.JSSDKSignature = function (url, callback) {
-    if (!configs.appId) {
-        throw new Error('请调用`weixin.config({appId, secret:})`');
-    }
-
     getJSSDKApiTicket(function (err, jsAPITicket) {
         if (err) {
             return callback(err);
@@ -210,7 +189,8 @@ exports.getAccessToken = function (code, callback) {
             secret: configs.secret,
             code: code,
             grant_type: 'authorization_code'
-        }
+        },
+        debug: configs.debug
     }, parseWeixinBody(callback));
 };
 
@@ -228,7 +208,8 @@ exports.getUserInfo = function (openId, accessToken, callback) {
             access_token: accessToken,
             openid: openId,
             lang: 'zh_CN'
-        }
+        },
+        debug: configs.debug
     }, parseWeixinBody(callback));
 };
 

@@ -1,6 +1,6 @@
 {
   "name": "blear.node.weixin",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "微信授权登录、JSSDK",
   "scripts": {
     "live": "browser-sync start --config bs-config.js",
@@ -38,7 +38,6 @@
     "url": "https://github.com/blearjs/blear.node.weixin/issues"
   },
   "dependencies": {
-    "blear.classes.cache": "^1.0.4",
     "blear.classes.class": "^1.0.8",
     "blear.classes.events": "^1.0.4",
     "blear.node.encryption": "^1.0.1",
