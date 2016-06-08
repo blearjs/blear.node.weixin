@@ -62,7 +62,7 @@ var parseWeixinBody = function (callback) {
         }
 
         if (ret.expires_in) {
-            ret.expires_in =ret.expires_in * 1000;
+            ret.expires_in = ret.expires_in * 1000;
             ret.expiresIn = ret.expires_in;
         }
 
@@ -108,7 +108,10 @@ var getJSSDKToken = function (callback) {
 // 获取微信 JSSDK jsapi_ticket
 var getJSSDKApiTicket = function (callback) {
     if (configs.jsApiTicket) {
-        return callback(null, configs.jsApiTicket);
+        return callback(null, {
+            ticket: configs.jsApiTicket,
+            expiresIn: -1
+        });
     }
 
     howdo
