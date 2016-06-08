@@ -154,7 +154,7 @@ var signature = function (info, url) {
     var signature = encryption.sha1(str);
 
     return object.assign(ret, configs, {
-        jsApiTicket: info,
+        jsApiTicket: info.ticket,
         signature: signature,
         state: random.string(),
         expiresIn: info.expiresIn
