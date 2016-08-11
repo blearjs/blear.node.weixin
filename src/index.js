@@ -70,15 +70,15 @@ var parseWeixinBody = function (callback) {
             ret.accessToken = ret.access_token;
         }
 
-        if (ret.refreshToken) {
-            ret.accessToken = ret.refresh_token;
+        if (ret.refresh_token) {
+            ret.refreshToken = ret.refresh_token;
         }
 
         if (ret.openid) {
             ret.openId = ret.openid;
         }
 
-        if (ret.openid) {
+        if (ret.unionid) {
             ret.unionId = ret.unionid;
         }
 
