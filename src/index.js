@@ -26,6 +26,7 @@ var configs = {
     debug: false,
     appId: '',
     secret: '',
+    // 指定 accessToken 请求地址
     accessTokenURL: '',
     // 指定 令牌
     jsApiTicket: ''
@@ -95,10 +96,13 @@ var parseWeixinBody = function (callback) {
 // 获取微信 JSSDK token
 var getJSSDKToken = function (callback) {
     if (configs.accessTokenURL) {
-        request({
+        return request({
             url: configs.accessTokenURL,
-            appid: configs.appId,
-            secret: configs.secret
+            query: {
+                appid: configs.appId,
+                secret: configs.secret,
+                debug: configs.debug
+            }
         }, function (err, body) {
             if (err) {
                 return callback(err);
