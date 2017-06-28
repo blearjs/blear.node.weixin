@@ -16,7 +16,6 @@ var fun = require('blear.utils.function');
 var encryption = require('blear.node.encryption');
 var request = require('blear.node.request');
 
-
 var reHash = /#.*$/;
 var WEIXIN_TOKEN_URL = 'https://api.weixin.qq.com/cgi-bin/token';
 var WEIXIN_TICKET_URL = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket';
@@ -32,16 +31,109 @@ var configs = {
     jsApiTicket: ''
 };
 
+/**
+ * 配置
+ * @param cf
+ */
 exports.config = function (cf) {
     object.assign(configs, cf);
 };
 
+/**
+ * URL 微信 JSSDK 签名
+ * @param url
+ * @param callback
+ */
+exports.JSSDKSignature = function (url, callback) {
+    getJSSDKApiTicket(function (err, info) {
+        if (err) {
+            return callback(err);
+        }
+
+        callback(null, JSSDKSignature(info, url));
+    });
+};
+
+/**
+ * 根据 code 获取 authorization accessToken
+ * @param code
+ * @param callback
+ */
+exports.getAuthorizationAccessToken = function (code, callback) {
+    requestWeixin({
+        url: WEIXIN_ACCESS_TOKEN_URL,
+        query: {
+            appid: configs.appId,
+            secret: configs.secret,
+            code: code,
+            grant_type: 'authorization_code'
+        },
+        debug: configs.debug
+    }, parseResponseCallback(callback));
+};
+
+/**
+ * 获取用户基本信息
+ * @param openId
+ * @param accessToken
+ * @param callback
+ */
+exports.getUserInfo = function (openId, accessToken, callback) {
+    requestWeixin({
+        url: WEIXIN_USER_INFO,
+        query: {
+            access_token: accessToken,
+            openid: openId,
+            lang: 'zh_CN'
+        },
+        debug: configs.debug
+    }, parseResponseCallback(callback));
+};
+
+/**
+ * 请求微信
+ * @param options
+ * @param callback
+ */
+exports.request = requestWeixin;
+
+
+// ===============================================
+
+// 请求微信
+function requestWeixin(options, callback) {
+    request(options, parseResponseCallback(callback));
+}
+
+// 获取微信 JSSDK jsapi_ticket
+function getJSSDKApiTicket(callback) {
+    if (configs.jsApiTicket) {
+        return callback(null, {
+            ticket: configs.jsApiTicket,
+            expiresIn: -1
+        });
+    }
+
+    howdo
+        .task(getJSSDKToken)
+        .task(function (next, ret) {
+            requestWeixin({
+                url: WEIXIN_TICKET_URL,
+                query: {
+                    access_token: ret.accessToken,
+                    type: 'jsapi'
+                },
+                debug: configs.debug
+            }, parseResponseCallback(next));
+        })
+        .follow(callback);
+}
 
 /**
  * 解析微信返回内容
  * @param callback
  */
-var parseResponseCallback = function (callback) {
+function parseResponseCallback(callback) {
     callback = fun.noop(callback);
 
     return function (err, body) {
@@ -90,13 +182,12 @@ var parseResponseCallback = function (callback) {
 
         callback(null, ret);
     };
-};
-
+}
 
 // 获取微信 JSSDK token
-var getJSSDKToken = function (callback) {
+function getJSSDKToken(callback) {
     if (configs.accessTokenURL) {
-        return request({
+        return requestWeixin({
             url: configs.accessTokenURL,
             query: {
                 appid: configs.appId,
@@ -125,7 +216,7 @@ var getJSSDKToken = function (callback) {
         });
     }
 
-    request({
+    requestWeixin({
         url: WEIXIN_TOKEN_URL,
         query: {
             grant_type: 'client_credential',
@@ -134,33 +225,7 @@ var getJSSDKToken = function (callback) {
         },
         debug: configs.debug
     }, parseResponseCallback(callback));
-};
-
-
-// 获取微信 JSSDK jsapi_ticket
-var getJSSDKApiTicket = function (callback) {
-    if (configs.jsApiTicket) {
-        return callback(null, {
-            ticket: configs.jsApiTicket,
-            expiresIn: -1
-        });
-    }
-
-    howdo
-        .task(getJSSDKToken)
-        .task(function (next, ret) {
-            request({
-                url: WEIXIN_TICKET_URL,
-                query: {
-                    access_token: ret.accessToken,
-                    type: 'jsapi'
-                },
-                debug: configs.debug
-            }, parseResponseCallback(next));
-        })
-        .follow(callback);
-};
-
+}
 
 /**
  * 签名算法
@@ -168,7 +233,7 @@ var getJSSDKApiTicket = function (callback) {
  * @param url {String} 用于签名的 url ，注意必须动态获取，不能 hardcode
  * @returns {Object}
  */
-var signature = function (info, url) {
+function JSSDKSignature(info, url) {
     var ret = {
         jsapi_ticket: info.ticket,
         nonceStr: random.string(),
@@ -194,61 +259,4 @@ var signature = function (info, url) {
         state: random.string(),
         expiresIn: info.expiresIn
     });
-};
-
-
-/**
- * URL 微信 JSSDK 签名
- * @param url
- * @param callback
- */
-exports.JSSDKSignature = function (url, callback) {
-    getJSSDKApiTicket(function (err, info) {
-        if (err) {
-            return callback(err);
-        }
-
-        callback(null, signature(info, url));
-    });
-};
-
-
-/**
- * 根据 code 获取 authorization accessToken
- * @param code
- * @param callback
- */
-exports.getAuthorizationAccessToken = function (code, callback) {
-    request({
-        url: WEIXIN_ACCESS_TOKEN_URL,
-        query: {
-            appid: configs.appId,
-            secret: configs.secret,
-            code: code,
-            grant_type: 'authorization_code'
-        },
-        debug: configs.debug
-    }, parseResponseCallback(callback));
-};
-
-
-/**
- * 获取用户基本信息
- * @param openId
- * @param accessToken
- * @param callback
- */
-exports.getUserInfo = function (openId, accessToken, callback) {
-    request({
-        url: WEIXIN_USER_INFO,
-        query: {
-            access_token: accessToken,
-            openid: openId,
-            lang: 'zh_CN'
-        },
-        debug: configs.debug
-    }, parseResponseCallback(callback));
-};
-
-
-exports.parseResponseCallback = parseResponseCallback;
+}
