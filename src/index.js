@@ -41,7 +41,7 @@ exports.config = function (cf) {
  * 解析微信返回内容
  * @param callback
  */
-var parseWeixinBody = function (callback) {
+var parseResponseCallback = function (callback) {
     callback = fun.noop(callback);
 
     return function (err, body) {
@@ -133,7 +133,7 @@ var getJSSDKToken = function (callback) {
             secret: configs.secret
         },
         debug: configs.debug
-    }, parseWeixinBody(callback));
+    }, parseResponseCallback(callback));
 };
 
 
@@ -156,7 +156,7 @@ var getJSSDKApiTicket = function (callback) {
                     type: 'jsapi'
                 },
                 debug: configs.debug
-            }, parseWeixinBody(next));
+            }, parseResponseCallback(next));
         })
         .follow(callback);
 };
@@ -214,11 +214,11 @@ exports.JSSDKSignature = function (url, callback) {
 
 
 /**
- * 根据 code 获取 accessToken
+ * 根据 code 获取 authorization accessToken
  * @param code
  * @param callback
  */
-exports.getAccessToken = function (code, callback) {
+exports.getAuthorizationAccessToken = function (code, callback) {
     request({
         url: WEIXIN_ACCESS_TOKEN_URL,
         query: {
@@ -228,7 +228,7 @@ exports.getAccessToken = function (code, callback) {
             grant_type: 'authorization_code'
         },
         debug: configs.debug
-    }, parseWeixinBody(callback));
+    }, parseResponseCallback(callback));
 };
 
 
@@ -247,6 +247,8 @@ exports.getUserInfo = function (openId, accessToken, callback) {
             lang: 'zh_CN'
         },
         debug: configs.debug
-    }, parseWeixinBody(callback));
+    }, parseResponseCallback(callback));
 };
 
+
+exports.parseResponseCallback = parseResponseCallback;
