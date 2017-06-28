@@ -8,7 +8,7 @@
 
 'use strict';
 
-var howdo = require('blear.utils.howdo');
+var plan = require('blear.utils.plan');
 var object = require('blear.utils.object');
 var random = require('blear.utils.random');
 var number = require('blear.utils.number');
@@ -69,7 +69,7 @@ exports.getAuthorizationAccessToken = function (code, callback) {
             grant_type: 'authorization_code'
         },
         debug: configs.debug
-    }, parseResponseCallback(callback));
+    }, callback);
 };
 
 /**
@@ -87,7 +87,7 @@ exports.getUserInfo = function (openId, accessToken, callback) {
             lang: 'zh_CN'
         },
         debug: configs.debug
-    }, parseResponseCallback(callback));
+    }, callback);
 };
 
 /**
@@ -114,7 +114,7 @@ function getJSSDKApiTicket(callback) {
         });
     }
 
-    howdo
+    plan
         .task(getJSSDKToken)
         .task(function (next, ret) {
             requestWeixin({
@@ -124,9 +124,9 @@ function getJSSDKApiTicket(callback) {
                     type: 'jsapi'
                 },
                 debug: configs.debug
-            }, parseResponseCallback(next));
+            }, next);
         })
-        .follow(callback);
+        .serial(callback);
 }
 
 /**
@@ -194,26 +194,7 @@ function getJSSDKToken(callback) {
                 secret: configs.secret,
                 debug: configs.debug
             }
-        }, function (err, body) {
-            if (err) {
-                return callback(err);
-            }
-
-            var json = {};
-
-            try {
-                json = JSON.parse(body);
-            } catch (err) {
-                json.code = 500;
-                json.message = err.message;
-            }
-
-            if (json.code === 200) {
-                return callback(null, json.result);
-            }
-
-            callback(new Error(json.message));
-        });
+        }, callback);
     }
 
     requestWeixin({
@@ -224,7 +205,7 @@ function getJSSDKToken(callback) {
             secret: configs.secret
         },
         debug: configs.debug
-    }, parseResponseCallback(callback));
+    }, callback);
 }
 
 /**
