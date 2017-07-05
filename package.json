@@ -1,6 +1,6 @@
 {
   "name": "blear.node.weixin",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "微信授权登录、JSSDK",
   "scripts": {
     "live": "browser-sync start --config bs-config.js",

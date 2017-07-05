@@ -97,6 +97,12 @@ exports.getUserInfo = function (openId, accessToken, callback) {
  */
 exports.request = requestWeixin;
 
+/**
+ * 解析响应内容
+ * @type {parseResponseBody}
+ */
+exports.parseResponseBody = parseResponseBody;
+
 
 // ===============================================
 
@@ -129,6 +135,56 @@ function getJSSDKApiTicket(callback) {
         .serial(callback);
 }
 
+
+/**
+ * 解析内容为 JSON 对象
+ * @param body
+ * @returns {*}
+ */
+function parseResponseBody(body) {
+    var ret = {};
+
+    try {
+        ret = JSON.parse(body);
+        ret.errcode = ret.errcode || 0;
+    } catch (err) {
+        ret.errcode = -1;
+        ret.errmsg = '数据解析失败';
+    }
+
+    if (ret.errcode !== 0) {
+        return callback(new TypeError(ret.errmsg || '未知错误'));
+    }
+
+    if (ret.expires_in) {
+        ret.expires_in = ret.expires_in * 1000;
+        ret.expiresIn = ret.expires_in;
+    }
+
+    if (ret.access_token) {
+        ret.accessToken = ret.access_token;
+    }
+
+    if (ret.refresh_token) {
+        ret.refreshToken = ret.refresh_token;
+    }
+
+    if (ret.openid) {
+        ret.openId = ret.openid;
+    }
+
+    if (ret.unionid) {
+        ret.unionId = ret.unionid;
+    }
+
+    if (ret.headimgurl) {
+        ret.avatar = ret.headimgurl;
+    }
+
+    return ret;
+}
+
+
 /**
  * 解析微信返回内容
  * @param callback
@@ -141,46 +197,7 @@ function parseResponseCallback(callback) {
             return callback(err);
         }
 
-        var ret = {};
-
-        try {
-            ret = JSON.parse(body);
-            ret.errcode = ret.errcode || 0;
-        } catch (err) {
-            ret.errcode = -1;
-            ret.errmsg = '数据解析失败';
-        }
-
-        if (ret.errcode !== 0) {
-            return callback(new TypeError(ret.errmsg || '未知错误'));
-        }
-
-        if (ret.expires_in) {
-            ret.expires_in = ret.expires_in * 1000;
-            ret.expiresIn = ret.expires_in;
-        }
-
-        if (ret.access_token) {
-            ret.accessToken = ret.access_token;
-        }
-
-        if (ret.refresh_token) {
-            ret.refreshToken = ret.refresh_token;
-        }
-
-        if (ret.openid) {
-            ret.openId = ret.openid;
-        }
-
-        if (ret.unionid) {
-            ret.unionId = ret.unionid;
-        }
-
-        if (ret.headimgurl) {
-            ret.avatar = ret.headimgurl;
-        }
-
-        callback(null, ret);
+        callback(null, parseResponseBody(body));
     };
 }
 
