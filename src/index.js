@@ -205,14 +205,30 @@ function parseResponseCallback(callback) {
 // 获取微信 JSSDK token
 function getJSSDKToken(callback) {
     if (configs.accessTokenURL) {
-        return requestWeixin({
+        return request({
+            debug: configs.debug,
             url: configs.accessTokenURL,
             query: {
-                appid: configs.appId,
-                secret: configs.secret,
-                debug: configs.debug
+                appId: configs.appId,
+                appSecret: configs.secret
             }
-        }, callback);
+        }, function (err, body) {
+            if (err) {
+                return callback(err);
+            }
+
+            try {
+                var ret = JSON.parse(body);
+            } catch (err) {
+                return callback(err);
+            }
+
+            if (ret.code === 200) {
+                return callback(null, ret.result);
+            }
+
+            callback(new Error(ret.message || '请求 accessToken 出错'));
+        });
     }
 
     requestWeixin({
