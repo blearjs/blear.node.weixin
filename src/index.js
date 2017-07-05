@@ -139,9 +139,10 @@ function getJSSDKApiTicket(callback) {
 /**
  * 解析内容为 JSON 对象
  * @param body
+ * @param callback
  * @returns {*}
  */
-function parseResponseBody(body) {
+function parseResponseBody(body, callback) {
     var ret = {};
 
     try {
@@ -181,7 +182,7 @@ function parseResponseBody(body) {
         ret.avatar = ret.headimgurl;
     }
 
-    return ret;
+    callback(null, ret);
 }
 
 
@@ -197,7 +198,7 @@ function parseResponseCallback(callback) {
             return callback(err);
         }
 
-        callback(null, parseResponseBody(body));
+        parseResponseBody(body, callback);
     };
 }
 
