@@ -18,10 +18,10 @@ describe('测试文件', function () {
         weixin.config({
             debug: true,
             appId: 'wxa8c289037620b15c',
-            secret: '397c03bae013c5ade076009c973edf2e'
+            appSecret: '397c03bae013c5ade076009c973edf2e'
         });
 
-        weixin.JSSDKSignature(url, function (err, sign) {
+        weixin.jsApiSignature(url, function (err, sign) {
             if(err) {
                 return done(err);
             }

@@ -27,7 +27,7 @@ var configs = {
     appId: '',
     appSecret: '',
     // 指定 js-api-ticket 方法
-    getJSAPITicket: function (callback) {
+    getJsApiTicket: function (callback) {
         callback(new Error('未配置获取 js-api-ticket 方法'), {ticket: 'xxxx'});
     }
 };
@@ -41,17 +41,17 @@ exports.config = function (cf) {
 };
 
 /**
- * URL 微信 JSAPI 签名
+ * URL 微信 js Api 签名
  * @param url
  * @param callback
  */
-exports.JSAPISignature = function (url, callback) {
-    getJSSDKApiTicket(function (err, info) {
+exports.jsApiSignature = function (url, callback) {
+    getJsApiTicket(function (err, info) {
         if (err) {
             return callback(err);
         }
 
-        callback(null, JSAPISignature(info, url));
+        callback(null, jsApiTicket(info, url));
     });
 };
 
@@ -113,10 +113,16 @@ function requestWeixin(options, callback) {
 }
 
 // 获取微信 JSSDK jsapi_ticket
-function getJSSDKApiTicket(callback) {
+function getJsApiTicket(callback) {
     plan
         .task(function (next) {
-            configs.getJSAPITicket(next);
+            configs.getJsApiTicket(function (err, ret) {
+                if (err) {
+                    return next();
+                }
+
+                next(null, ret);
+            });
         })
         .task(function (next, ret) {
             if (ret) {
@@ -224,7 +230,7 @@ function parseResponseCallback(callback) {
  * @param url {String} 用于签名的 url ，注意必须动态获取，不能 hardcode
  * @returns {Object}
  */
-function JSAPISignature(info, url) {
+function jsApiTicket(info, url) {
     var ret = {
         jsapi_ticket: info.ticket,
         nonceStr: random.string(),
@@ -244,7 +250,9 @@ function JSAPISignature(info, url) {
     var str = list.join('&');
     var signature = encryption.sha1(str);
 
-    return object.assign(ret, configs, {
+    return object.assign(ret, {
+        appId: configs.appId,
+        appSecret: configs.appSecret,
         jsApiTicket: info.ticket,
         signature: signature,
         state: random.string(),
