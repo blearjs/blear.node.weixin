@@ -41,17 +41,17 @@ exports.config = function (cf) {
 };
 
 /**
- * URL 微信 JSSDK 签名
+ * URL 微信 JSAPI 签名
  * @param url
  * @param callback
  */
-exports.JSSDKSignature = function (url, callback) {
+exports.JSAPISignature = function (url, callback) {
     getJSSDKApiTicket(function (err, info) {
         if (err) {
             return callback(err);
         }
 
-        callback(null, JSSDKSignature(info, url));
+        callback(null, JSAPISignature(info, url));
     });
 };
 
@@ -224,7 +224,7 @@ function parseResponseCallback(callback) {
  * @param url {String} 用于签名的 url ，注意必须动态获取，不能 hardcode
  * @returns {Object}
  */
-function JSSDKSignature(info, url) {
+function JSAPISignature(info, url) {
     var ret = {
         jsapi_ticket: info.ticket,
         nonceStr: random.string(),
