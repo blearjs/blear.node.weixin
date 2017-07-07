@@ -3,6 +3,7 @@
  * @doc http://mp.weixin.qq.com/wiki/17/c0f37d5704f0b64713d5d2c37b468d75.html
  * @author ydr.me
  * @create 2015-12-08 11:08
+ * @update 2017年07月07日23:09:53
  */
 
 
@@ -24,11 +25,11 @@ var WEIXIN_USER_INFO = 'https://api.weixin.qq.com/sns/userinfo';
 var configs = {
     debug: false,
     appId: '',
-    secret: '',
-    // 指定 accessToken 请求地址
-    accessTokenURL: '',
-    // 指定 令牌
-    jsApiTicket: ''
+    appSecret: '',
+    // 指定 js-api-ticket 方法
+    getJSAPITicket: function (callback) {
+        callback(new Error('未配置获取 js-api-ticket 方法'), {ticket: 'xxxx'});
+    }
 };
 
 /**
@@ -64,7 +65,7 @@ exports.getAuthorizationAccessToken = function (code, callback) {
         url: WEIXIN_ACCESS_TOKEN_URL,
         query: {
             appid: configs.appId,
-            secret: configs.secret,
+            secret: configs.appSecret,
             code: code,
             grant_type: 'authorization_code'
         },
@@ -113,24 +114,38 @@ function requestWeixin(options, callback) {
 
 // 获取微信 JSSDK jsapi_ticket
 function getJSSDKApiTicket(callback) {
-    if (configs.jsApiTicket) {
-        return callback(null, {
-            ticket: configs.jsApiTicket,
-            expiresIn: -1
-        });
-    }
-
     plan
-        .task(getJSSDKToken)
+        .task(function (next) {
+            configs.getJSAPITicket(next);
+        })
         .task(function (next, ret) {
-            requestWeixin({
-                url: WEIXIN_TICKET_URL,
-                query: {
-                    access_token: ret.accessToken,
-                    type: 'jsapi'
-                },
-                debug: configs.debug
-            }, next);
+            if (ret) {
+                return next(null, ret);
+            }
+
+            plan
+                .task(function (next) {
+                    requestWeixin({
+                        url: WEIXIN_TOKEN_URL,
+                        query: {
+                            grant_type: 'client_credential',
+                            appid: configs.appId,
+                            secret: configs.appSecret
+                        },
+                        debug: configs.debug
+                    }, next);
+                })
+                .task(function (next, ret) {
+                    requestWeixin({
+                        url: WEIXIN_TICKET_URL,
+                        query: {
+                            access_token: ret.accessToken,
+                            type: 'jsapi'
+                        },
+                        debug: configs.debug
+                    }, next);
+                })
+                .serial(next);
         })
         .serial(callback);
 }
@@ -202,45 +217,6 @@ function parseResponseCallback(callback) {
     };
 }
 
-// 获取微信 JSSDK token
-function getJSSDKToken(callback) {
-    if (configs.accessTokenURL) {
-        return request({
-            debug: configs.debug,
-            url: configs.accessTokenURL,
-            query: {
-                appId: configs.appId,
-                appSecret: configs.secret
-            }
-        }, function (err, body) {
-            if (err) {
-                return callback(err);
-            }
-
-            try {
-                var ret = JSON.parse(body);
-            } catch (err) {
-                return callback(err);
-            }
-
-            if (ret.code === 200) {
-                return callback(null, ret.result);
-            }
-
-            callback(new Error(ret.message || '请求 accessToken 出错'));
-        });
-    }
-
-    requestWeixin({
-        url: WEIXIN_TOKEN_URL,
-        query: {
-            grant_type: 'client_credential',
-            appid: configs.appId,
-            secret: configs.secret
-        },
-        debug: configs.debug
-    }, callback);
-}
 
 /**
  * 签名算法
