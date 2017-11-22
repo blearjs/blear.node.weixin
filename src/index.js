@@ -50,7 +50,7 @@ exports.config = function (cf) {
 exports.jsApiSignature = function (options, url, callback) {
     var args = access.args(arguments);
 
-    if(args.length === 2) {
+    if (args.length === 2) {
         callback = args[1];
         url = args[0];
         options = {};
@@ -73,6 +73,14 @@ exports.jsApiSignature = function (options, url, callback) {
  * @param callback
  */
 exports.getAuthorizationAccessToken = function (options, code, callback) {
+    var args = access.args(arguments);
+
+    if (args.length === 2) {
+        callback = args[1];
+        code = args[0];
+        options = {};
+    }
+
     options = object.assign({}, configs, options);
     requestWeixin({
         url: WEIXIN_ACCESS_TOKEN_URL,
