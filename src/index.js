@@ -14,6 +14,7 @@ var object = require('blear.utils.object');
 var random = require('blear.utils.random');
 var number = require('blear.utils.number');
 var fun = require('blear.utils.function');
+var access = require('blear.utils.access');
 var encryption = require('blear.node.encryption');
 var request = require('blear.node.request');
 
@@ -42,34 +43,46 @@ exports.config = function (cf) {
 
 /**
  * URL 微信 js Api 签名
+ * @param [options]
  * @param url
  * @param callback
  */
-exports.jsApiSignature = function (url, callback) {
-    getJsApiTicket(function (err, info) {
+exports.jsApiSignature = function (options, url, callback) {
+    var args = access.args(arguments);
+
+    if(args.length === 2) {
+        callback = args[1];
+        url = args[0];
+        options = {};
+    }
+
+    options = object.assign({}, configs, options);
+    getJsApiTicket(options, function (err, info) {
         if (err) {
             return callback(err);
         }
 
-        callback(null, jsApiTicket(info, url));
+        callback(null, jsApiTicket(options, info, url));
     });
 };
 
 /**
  * 根据 code 获取 authorization accessToken
+ * @param [options]
  * @param code
  * @param callback
  */
-exports.getAuthorizationAccessToken = function (code, callback) {
+exports.getAuthorizationAccessToken = function (options, code, callback) {
+    options = object.assign({}, configs, options);
     requestWeixin({
         url: WEIXIN_ACCESS_TOKEN_URL,
         query: {
-            appid: configs.appId,
-            secret: configs.appSecret,
+            appid: options.appId,
+            secret: options.appSecret,
             code: code,
             grant_type: 'authorization_code'
         },
-        debug: configs.debug
+        debug: options.debug
     }, callback);
 };
 
@@ -113,10 +126,10 @@ function requestWeixin(options, callback) {
 }
 
 // 获取微信 JSSDK jsapi_ticket
-function getJsApiTicket(callback) {
+function getJsApiTicket(options, callback) {
     plan
         .task(function (next) {
-            configs.getJsApiTicket(function (err, ret) {
+            options.getJsApiTicket(function (err, ret) {
                 if (err) {
                     return next();
                 }
@@ -135,10 +148,10 @@ function getJsApiTicket(callback) {
                         url: WEIXIN_TOKEN_URL,
                         query: {
                             grant_type: 'client_credential',
-                            appid: configs.appId,
-                            secret: configs.appSecret
+                            appid: options.appId,
+                            secret: options.appSecret
                         },
-                        debug: configs.debug
+                        debug: options.debug
                     }, next);
                 })
                 .task(function (next, ret) {
@@ -148,7 +161,7 @@ function getJsApiTicket(callback) {
                             access_token: ret.accessToken,
                             type: 'jsapi'
                         },
-                        debug: configs.debug
+                        debug: options.debug
                     }, next);
                 })
                 .serial(next);
@@ -226,11 +239,12 @@ function parseResponseCallback(callback) {
 
 /**
  * 签名算法
+ * @param options
  * @param info {String} 用于签名的 jsapi_ticket
  * @param url {String} 用于签名的 url ，注意必须动态获取，不能 hardcode
  * @returns {Object}
  */
-function jsApiTicket(info, url) {
+function jsApiTicket(options, info, url) {
     var ret = {
         jsapi_ticket: info.ticket,
         nonceStr: random.string(),
@@ -251,8 +265,8 @@ function jsApiTicket(info, url) {
     var signature = encryption.sha1(str);
 
     return object.assign(ret, {
-        appId: configs.appId,
-        appSecret: configs.appSecret,
+        appId: options.appId,
+        appSecret: options.appSecret,
         jsApiTicket: info.ticket,
         signature: signature,
         state: random.string(),
