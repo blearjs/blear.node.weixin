@@ -4,6 +4,7 @@
  * @author ydr.me
  * @create 2015-12-08 11:08
  * @update 2017年07月07日23:09:53
+ * @update 2017年12月06日14:29:31
  */
 
 
@@ -22,7 +23,9 @@ var reHash = /#.*$/;
 var WEIXIN_TOKEN_URL = 'https://api.weixin.qq.com/cgi-bin/token';
 var WEIXIN_TICKET_URL = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket';
 var WEIXIN_ACCESS_TOKEN_URL = 'https://api.weixin.qq.com/sns/oauth2/access_token';
-var WEIXIN_USER_INFO = 'https://api.weixin.qq.com/sns/userinfo';
+var WEIXIN_USER_INFO_URL = 'https://api.weixin.qq.com/sns/userinfo';
+// @ref https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1444738727
+var WEIXIN_MEDIA_GET_URL = 'https://api.weixin.qq.com/cgi-bin/media/get';
 var configs = {
     debug: false,
     appId: '',
@@ -102,7 +105,7 @@ exports.getAuthorizationAccessToken = function (options, code, callback) {
  */
 exports.getUserInfo = function (openId, accessToken, callback) {
     requestWeixin({
-        url: WEIXIN_USER_INFO,
+        url: WEIXIN_USER_INFO_URL,
         query: {
             access_token: accessToken,
             openid: openId,
@@ -110,6 +113,42 @@ exports.getUserInfo = function (openId, accessToken, callback) {
         },
         debug: configs.debug
     }, callback);
+};
+
+/**
+ * 获取媒体信息
+ * @param mediaId
+ * @param accessToken
+ * @param callback
+ */
+exports.getMedia = function (mediaId, accessToken, callback) {
+    request({
+        method: 'get',
+        url: WEIXIN_MEDIA_GET_URL,
+        query: {
+            access_token: accessToken,
+            media_id: mediaId
+        },
+        debug: configs.debug,
+        encoding: 'binary'
+    }, function (err, body, res) {
+        if (err) {
+            return callback(err, body, res);
+        }
+
+        if (/json|text/i.test(res.headers['content-type'])) {
+            body = body.toString();
+            return parseResponseBody(body, function (err, ret) {
+                if (err) {
+                    return callback(err, body, res);
+                }
+
+                callback(new Error('微信返回未知错误'), body, res);
+            });
+        }
+
+        callback(null, body, res);
+    });
 };
 
 /**
