@@ -49,11 +49,12 @@
     "blear.utils.function": "1.x",
     "blear.utils.number": "1.x",
     "blear.utils.object": "1.x",
-    "blear.utils.plan": "^2.1.2",
+    "blear.utils.plan": "^2.2.2",
     "blear.utils.random": "1.x",
     "blear.utils.string": "1.x",
     "blear.utils.time": "1.x",
-    "blear.utils.typeis": "1.x"
+    "blear.utils.typeis": "1.x",
+    "xml2js": "^0.4.19"
   },
   "peerDependencies": {},
   "devDependencies": {
