@@ -80,8 +80,8 @@ exports.wrapOutgoing = function (from, to, type, content) {
     // music
     // news
     return '<xml>' +
-        /**/'<ToUserName><![CDATA[' + from + ']]></ToUserName>' +
-        /**/'<FromUserName><![CDATA[' + to + ']]></FromUserName>' +
+        /**/'<FromUserName><![CDATA[' + from + ']]></FromUserName>' +
+        /**/'<ToUserName><![CDATA[' + to + ']]></ToUserName>' +
         /**/'<CreateTime>' + Date.now() + '</CreateTime>' +
         /**/'<MsgType><![CDATA[' + type + ']]></MsgType>' +
         /**/'<Content><![CDATA[' + content + ']]></Content>' +
