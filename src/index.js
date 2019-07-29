@@ -9,5 +9,6 @@
 'use strict';
 
 
-
+exports.basic = require('./features/basic');
+exports.message = require('./features/message');
 
