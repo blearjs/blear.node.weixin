@@ -1,7 +1,7 @@
 {
   "name": "blear.node.weixin",
-  "version": "3.2.0",
-  "description": "微信授权登录、JSSDK",
+  "version": "4.0.0",
+  "description": "微信授权登录、JSSDK、消息",
   "scripts": {
     "live": "browser-sync start --config bs-config.js",
     "test-travis": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha --report lcovonly",
@@ -18,7 +18,9 @@
   "keywords": [
     "blear",
     "node",
-    "template",
+    "weixin",
+    "oauth",
+    "message",
     "express",
     "cloudcome",
     "ydr.me"
